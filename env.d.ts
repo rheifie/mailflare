@@ -22,6 +22,10 @@ interface CloudflareEnv {
 	LOGIN_RATE_LIMIT?: RateLimit;
 	AGENT_RATE_LIMIT?: RateLimit;
 	CF_TOKEN?: string;
+	/** Outbound provider selection. Defaults to Cloudflare Email Sending. */
+	OUTBOUND_EMAIL_PROVIDER?: "cloudflare" | "resend";
+	/** Resend API key; keep this as a Worker secret, never a plain-text var. */
+	RESEND_API_KEY?: string;
 	CF_API_KEY?: string;
 	CF_EMAIL?: string;
 	TURNSTILE_SECRET_KEY?: string;

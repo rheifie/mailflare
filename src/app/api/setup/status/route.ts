@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { hasAdminAccount } from "@/lib/auth/setup";
 import { getEnv } from "@/lib/cloudflare";
 import { getPrimaryDomain } from "@/lib/user";
+import { getOutboundEmailProvider } from "@/lib/email/outbound-provider";
 
 export async function GET() {
 	const env = getEnv();
@@ -16,6 +17,7 @@ export async function GET() {
 			primaryDomain: domain
 				? { hostname: domain.hostname, sendingRequested: domain.sendingRequested }
 				: null,
+			outboundEmailProvider: getOutboundEmailProvider(env),
 		}, {
 			headers: { "Cache-Control": "no-store" },
 		});

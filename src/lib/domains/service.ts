@@ -20,6 +20,7 @@ import type { DomainProvisioningChanges } from "@/lib/domains/types";
 import { findSendingSubdomain } from "@/lib/domains/sending-status";
 import { preflightDomain } from "@/lib/domains/preflight";
 import { hasCloudflareCredentials } from "@/lib/runtime";
+import { getOutboundEmailProvider } from "@/lib/email/outbound-provider";
 
 export type DomainDnsView = {
 	routing: { records: CfDnsRecord[]; missing: CfDnsRecord[]; status?: string };
@@ -29,6 +30,8 @@ export type DomainDnsView = {
 	dkimSelector?: string;
 	/** The matching sending subdomain, when the zone has the domain added for sending. */
 	sendingSubdomain?: { name: string; tag: string };
+	outboundEmailProvider?: "cloudflare" | "resend";
+	outboundEmailConfigured?: boolean;
 };
 
 export async function listUserDomains(env: CloudflareEnv, userId: string) {
@@ -148,13 +151,14 @@ export async function getDomainDns(
 	// which goes stale when sending is enabled outside Mailflare (or when the row
 	// was written before the subdomain existed). A missing Email Sending permission
 	// must not take down the routing/DNS view, so a failed list degrades to none.
+	const provider = getOutboundEmailProvider(env);
 	const [routingDns, routingSettings, sendingSubdomains] = await Promise.all([
 		getEmailRoutingDns(env, domain.zoneId),
 		getEmailRoutingSettings(env, domain.zoneId),
-		listSendingSubdomains(env, domain.zoneId).catch((error) => {
+		provider === "cloudflare" ? listSendingSubdomains(env, domain.zoneId).catch((error) => {
 			console.warn("getDomainDns: failed to list sending subdomains", error);
 			return [];
-		}),
+		}) : Promise.resolve([]),
 	]);
 	const sendingSubdomain = findSendingSubdomain(domain.hostname, sendingSubdomains);
 	let sending: CfDnsRecord[] = [];

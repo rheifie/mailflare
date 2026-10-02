@@ -28,9 +28,15 @@ export default function DomainsPage() {
   // Self-hosted installs without Cloudflare credentials manage DNS by hand.
   const { data: me } = useQuery({
     queryKey: ["me"],
-    queryFn: async () => (await (await authFetch("/api/auth/me")).json()) as { managesDns?: boolean },
+    queryFn: async () => (await (await authFetch("/api/auth/me")).json()) as {
+      managesDns?: boolean;
+      outboundEmailProvider?: "cloudflare" | "resend";
+      outboundEmailConfigured?: boolean;
+    },
   });
   const managesDns = me?.managesDns ?? true;
+  const outboundEmailProvider = me?.outboundEmailProvider ?? "cloudflare";
+  const usingResend = outboundEmailProvider === "resend";
   const [domainCheck, setDomainCheck] = useState<DomainPreflight | null>(null);
   const [domainChecking, setDomainChecking] = useState(false);
   const [enableSending, setEnableSending] = useState(false);
@@ -51,6 +57,8 @@ export default function DomainsPage() {
       return (await res.json()) as {
         domains: Domain[];
         dns: Record<string, DnsStatusSummary>;
+        outboundEmailProvider?: "cloudflare" | "resend";
+        outboundEmailConfigured?: boolean;
       };
     },
   });
@@ -66,7 +74,7 @@ export default function DomainsPage() {
           throw new Error(result.error ?? "Domain check failed");
         }
         checkedDomain = result.domain;
-        sendingRequested = true;
+        sendingRequested = !usingResend;
         setDomainCheck(result.domain);
         setEnableSending(sendingRequested);
       }
@@ -198,7 +206,7 @@ export default function DomainsPage() {
     }
 
     setDomainCheck(result.domain);
-    setEnableSending(true);
+    setEnableSending(!usingResend);
   };
 
   return (
@@ -208,7 +216,9 @@ export default function DomainsPage() {
           <h1 className="text-3xl font-medium">Domains</h1>
           <p className="mt-1 text-sm text-neutral-500">
             {managesDns
-              ? "Domains must be on your Cloudflare account. Email Routing is enabled automatically, and Email Sending can be enabled when available."
+              ? usingResend
+                ? "Domains must be on your Cloudflare account. Email Routing is enabled automatically; verify each outbound sending domain in Resend."
+                : "Domains must be on your Cloudflare account. Email Routing is enabled automatically, and Email Sending can be enabled when available."
               : "Add the domains this server receives mail for. Open DNS on a domain to see the MX, SPF and DMARC records to create."}
           </p>
         </div>
@@ -223,8 +233,9 @@ export default function DomainsPage() {
             <DialogHeader>
               <DialogTitle>Add domain</DialogTitle>
               <DialogDescription>
-                Connect a Cloudflare zone and choose whether Mailflare should
-                provision Email Sending.
+                {usingResend
+                  ? "Connect a Cloudflare zone for inbound Email Routing. Outbound mail uses Resend; verify the sender domain and add its DNS records in Resend."
+                  : "Connect a Cloudflare zone and choose whether Mailflare should provision Cloudflare Email Sending."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -244,7 +255,7 @@ export default function DomainsPage() {
                   placeholder="example.com"
                 />
               </div>
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
+              {!usingResend && <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
                 <div>
                   <Label htmlFor="enable-sending">Enable sending</Label>
                   <p className="mt-1 text-xs leading-5 text-neutral-500">
@@ -267,7 +278,7 @@ export default function DomainsPage() {
                     disabled={!domainCheck}
                   />
                 )}
-              </div>
+              </div>}
               {domainCheck && (
                 <div className="flex items-center gap-3 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
                   <CheckCircle2 className="h-4 w-4" />
@@ -289,7 +300,7 @@ export default function DomainsPage() {
                     <ul className="list-disc space-y-1 pl-5">
                       <li>
                         All accounts — DNS Settings:Edit, Email Routing
-                        Addresses:Edit; Email Sending:Edit for outbound mail
+                        Addresses:Edit{!usingResend && "; Email Sending:Edit for outbound mail"}
                       </li>
                       <li>
                         All zones — DNS Settings:Edit, Email Routing Rules:Edit,
@@ -336,6 +347,8 @@ export default function DomainsPage() {
                 onSetup={setupDns}
                 setupRecord={setupRecord}
                 setupMessage={setupMessage}
+                outboundEmailProvider={data?.outboundEmailProvider ?? outboundEmailProvider}
+                outboundEmailConfigured={data?.outboundEmailConfigured ?? me?.outboundEmailConfigured}
                 item={d}
                 remove={remove}
               />

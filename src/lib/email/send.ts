@@ -13,6 +13,7 @@ import { loadMessageAttachmentContents, storeMessageAttachments, validateAttachm
 import type { AttachmentContent } from "@/lib/email/attachment-types";
 import { getOutboundAttachmentMaxMb } from "@/lib/email/attachment-policy";
 import { prepareCloudflareAttachments } from "@/lib/email/cloud-attachment-utils";
+import { createRfcMessageId, getOutboundEmailProvider, sendOutboundEmail } from "@/lib/email/outbound-provider";
 
 export type SendEmailInput = {
 	userId: string;
@@ -81,7 +82,7 @@ export async function sendEmail(
 		attachments.reduce((total, attachment) => total + attachment.content.byteLength, 0) > maxAttachmentBytes) {
 		throw new Error(`Attachments exceed the administrator's ${maxAttachmentMb} MB outgoing limit`);
 	}
-	if (input.subject.length > 998) throw new Error("Subject exceeds Cloudflare's 998-character limit");
+	if (input.subject.length > 998) throw new Error("Subject exceeds the 998-character limit");
 
 	const to = toRecipientList(input.to);
 	const cc = toRecipientList(input.cc);
@@ -102,7 +103,7 @@ export async function sendEmail(
 	if (inReplyTo) headers["In-Reply-To"] = `<${inReplyTo}>`;
 	if (references.length > 0) headers.References = formatMessageIdHeader(references);
 	if (new TextEncoder().encode(Object.entries(headers).map(([name, value]) => `${name}: ${value}\r\n`).join("")).byteLength > 16 * 1024) {
-		throw new Error("Headers exceed Cloudflare's 16 KB limit");
+		throw new Error("Headers exceed the 16 KB limit");
 	}
 
 	const messageId = newId("msg");
@@ -183,45 +184,35 @@ async function deliverEmail(env: CloudflareEnv, delivery: PreparedDelivery): Pro
 	const db = getDb(env);
 	const toAddr = joinEmailAddressList(to);
 	try {
-		const prepared = await prepareCloudflareAttachments(env, attachments, {
-			subject: input.subject,
-			html: input.html,
-			text: input.text,
-			headers,
-			publicOrigin: input.publicOrigin,
-		});
+		const prepared = getOutboundEmailProvider(env) === "cloudflare"
+			? await prepareCloudflareAttachments(env, attachments, {
+				subject: input.subject,
+				html: input.html,
+				text: input.text,
+				headers,
+				publicOrigin: input.publicOrigin,
+			})
+			: { attachments, html: input.html, text: input.text };
 		if (prepared.text !== input.text || prepared.html !== input.html) {
 			await db.update(messages).set({ textBody: prepared.text ?? null, htmlBody: prepared.html ?? null }).where(eq(messages.id, messageId));
 		}
-		const response = await env.EMAIL.send({
+		const response = await sendOutboundEmail(env, {
 			from,
 			to,
-			...(cc.length ? { cc } : {}),
-			...(bcc.length ? { bcc } : {}),
+			cc,
+			bcc,
 			subject: input.subject,
 			headers: Object.keys(headers).length ? headers : undefined,
 			html: prepared.html,
 			text: prepared.text,
-			attachments: prepared.attachments.map((attachment) =>
-				attachment.disposition === "inline" && attachment.contentId
-					? {
-							filename: attachment.filename,
-							type: attachment.type,
-							content: attachment.content,
-							disposition: "inline" as const,
-							contentId: attachment.contentId,
-						}
-					: {
-							filename: attachment.filename,
-							type: attachment.type,
-							content: attachment.content,
-							disposition: "attachment" as const,
-						},
-			),
+			attachments: prepared.attachments,
+		}, {
+			idempotencyKey: jobId,
+			rfcMessageId: createRfcMessageId(from, messageId),
 		});
 
-		// A fresh message starts its own conversation; Cloudflare's Message-ID is what
-		// any reply will name in In-Reply-To, so key the thread by it.
+		// A fresh message starts its own conversation. The provider result is the
+		// message's RFC Message-ID, which replies will name in In-Reply-To.
 		await db
 			.update(messages)
 			.set({

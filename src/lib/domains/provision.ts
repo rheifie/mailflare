@@ -14,6 +14,7 @@ import { hasCloudflareCredentials, isNodeRuntime } from "@/lib/runtime";
 import type { DomainProvisioningChanges, DomainProvisioningResult } from "@/lib/domains/types";
 import { removeMxRecords } from "@/lib/domains/mx-records";
 import { rollbackDomainProvisioning } from "@/lib/domains/rollback";
+import { getOutboundEmailProvider } from "@/lib/email/outbound-provider";
 
 /** Node/Docker has no Email Worker; a catch-all PUT to one 404s (CF 2016). */
 export function shouldBindEmailCatchAllToWorker(
@@ -39,6 +40,8 @@ export async function provisionDomainOnCloudflare(
 	options?: { enableRouting?: boolean; enableSending?: boolean; replaceMxRecords?: boolean },
 ): Promise<DomainProvisioningResult> {
 	const normalized = hostname.toLowerCase().trim();
+	// Cloudflare Email Sending is optional when Resend handles outbound delivery.
+	const enableSending = getOutboundEmailProvider(env) === "cloudflare" && (options?.enableSending ?? true);
 	if (!hasCloudflareCredentials(env)) {
 		// Nothing to provision: the operator points MX at this server themselves.
 		return {
@@ -46,7 +49,7 @@ export async function provisionDomainOnCloudflare(
 			zone: { id: MANUAL_ZONE_ID, name: normalized },
 			// Mail arrives whenever MX points at this server, so the domain is live at once.
 			routingEnabled: options?.enableRouting ?? true,
-			sendingRequested: options?.enableSending ?? true,
+			sendingRequested: enableSending,
 			sendingEnabled: false,
 			sendingSubdomainTag: null,
 			routingStatus: "manual",
@@ -61,8 +64,6 @@ export async function provisionDomainOnCloudflare(
 	}
 
 	const enableRouting = options?.enableRouting ?? true;
-	const enableSending = options?.enableSending ?? true;
-
 	let routingEnabled = false;
 	let sendingEnabled = false;
 	let sendingSubdomainTag: string | null = null;

@@ -35,8 +35,12 @@ export default function DomainItemCard({
   onSetup,
   setupRecord,
   setupMessage,
+  outboundEmailProvider = "cloudflare",
+  outboundEmailConfigured = false,
 }: DomainItemCardProps) {
   const auth = dns?.auth;
+  const resendSelected = outboundEmailProvider === "resend";
+  const sendingConfigured = resendSelected ? outboundEmailConfigured : item.sendingEnabled;
 
   return (
     <ListRow className="group relative flex-col items-stretch gap-3">
@@ -72,11 +76,11 @@ export default function DomainItemCard({
               routing
             </Badge>
             <Badge
-              variant={item.sendingEnabled ? "outline" : "secondary"}
-              className={cn("gap-1", !item.sendingEnabled && "opacity-50")}
+              variant={sendingConfigured ? "outline" : "secondary"}
+              className={cn("gap-1", !sendingConfigured && "opacity-50")}
             >
-              <StatusIcon ok={item.sendingEnabled} className="h-3 w-3" />
-              sending
+              <StatusIcon ok={sendingConfigured} className="h-3 w-3" />
+              {resendSelected ? "Resend outbound" : "sending"}
             </Badge>
           </div>
 

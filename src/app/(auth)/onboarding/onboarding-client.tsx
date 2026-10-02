@@ -18,6 +18,7 @@ export function OnboardingClient() {
 	const [domainCheck, setDomainCheck] = useState<DomainPreflight | null>(null);
 	const [domainChecking, setDomainChecking] = useState(false);
 	const [enableSending, setEnableSending] = useState(false);
+	const [outboundEmailProvider, setOutboundEmailProvider] = useState<"cloudflare" | "resend">("cloudflare");
 	const [domainId, setDomainId] = useState("");
 	const [localPart, setLocalPart] = useState("me");
 	const [error, setError] = useState<string | null>(null);
@@ -27,6 +28,7 @@ export function OnboardingClient() {
 	useEffect(() => {
 		void getDomains()
 			.then((data) => {
+				setOutboundEmailProvider(data.outboundEmailProvider ?? "cloudflare");
 				const primary = data.domains?.[0];
 				if (!primary) return;
 				setDomainId(primary.id);
@@ -42,7 +44,7 @@ export function OnboardingClient() {
 
 		const normalized = hostname.toLowerCase().trim();
 		let checkedDomain = domainCheck;
-		let sendingRequested = enableSending;
+		let sendingRequested = outboundEmailProvider === "cloudflare" && enableSending;
 		if (checkedDomain?.hostname !== normalized) {
 			const result = await checkDomain(normalized);
 			if (!result.ok || !result.domain) {
@@ -114,9 +116,11 @@ export function OnboardingClient() {
 		<AuthShell
 			icon={MailPlus}
 			title={step === 1 ? "Connect mail routing" : "Create your first mailbox"}
-			description={
+				description={
 				step === 1
-					? "Add the Cloudflare domain that will receive mail and optionally send through this workspace."
+					? outboundEmailProvider === "resend"
+						? "Add the Cloudflare domain that will receive mail. Verify its sender domain and DNS records in Resend."
+						: "Add the Cloudflare domain that will receive mail and optionally send through this workspace."
 					: "Choose the mailbox address that should open directly into the inbox."
 			}
 			steps={[
@@ -154,30 +158,36 @@ export function OnboardingClient() {
 								placeholder="example.com"
 							/>
 						</div>
-						<div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
-							<div>
-								<Label htmlFor="onboarding-enable-sending">Enable sending</Label>
-								<p className="mt-1 text-xs leading-5 text-neutral-500">
-									{domainChecking
-										? "Checking Cloudflare access..."
-										: domainCheck
-											? enableSending
-												? "Required to send email."
-												: "Receive-only mode."
-											: "Leave the domain field to verify it."}
-								</p>
+						{outboundEmailProvider === "resend" ? (
+							<p className="rounded-2xl bg-blue-50 px-4 py-3 text-sm leading-6 text-neutral-700">
+								Outbound mail uses Resend. Add this sender domain to Resend and publish its DNS records; Cloudflare Email Routing continues to receive mail.
+							</p>
+						) : (
+							<div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
+								<div>
+									<Label htmlFor="onboarding-enable-sending">Enable sending</Label>
+									<p className="mt-1 text-xs leading-5 text-neutral-500">
+										{domainChecking
+											? "Checking Cloudflare access..."
+											: domainCheck
+												? enableSending
+													? "Required to send email."
+													: "Receive-only mode."
+												: "Leave the domain field to verify it."}
+									</p>
+								</div>
+								{domainChecking ? (
+									<LoaderCircle className="h-4 w-4 animate-spin text-neutral-500" />
+								) : (
+									<Switch
+										id="onboarding-enable-sending"
+										checked={enableSending}
+										onCheckedChange={setEnableSending}
+										disabled={!domainCheck}
+									/>
+								)}
 							</div>
-							{domainChecking ? (
-								<LoaderCircle className="h-4 w-4 animate-spin text-neutral-500" />
-							) : (
-								<Switch
-									id="onboarding-enable-sending"
-									checked={enableSending}
-									onCheckedChange={setEnableSending}
-									disabled={!domainCheck}
-								/>
-							)}
-						</div>
+						)}
 						{domainCheck && (
 							<div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
 								<CheckCircle2 className="h-4 w-4" />

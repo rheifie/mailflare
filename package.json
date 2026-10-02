@@ -27,7 +27,13 @@
   "cloudflare": {
     "bindings": {
       "CF_TOKEN": {
-        "description": "Runtime Cloudflare API token used by Mailflare onboarding to call the Zones, DNS, and Email Routing APIs. Cloudflare's deploy/build token is not passed to the app, so create this separately at https://dash.cloudflare.com/profile/api-tokens with `Zone Read`, `DNS Edit`, `Email Routing Edit`, and `Email Routing Rules Write` permissions for the zones you will connect. Add `Email Sending Edit` to enable outbound mail. Paste only the token secret value, without `Bearer`."
+        "description": "Runtime Cloudflare API token used by Mailflare onboarding to call the Zones, DNS, and Email Routing APIs. Cloudflare's deploy/build token is not passed to the app, so create this separately at https://dash.cloudflare.com/profile/api-tokens with `Zone Read`, `DNS Edit`, `Email Routing Edit`, and `Email Routing Rules Write` permissions for the zones you will connect. Add `Email Sending Edit` when using the default Cloudflare provider (OUTBOUND_EMAIL_PROVIDER unset or cloudflare). Paste only the token secret value, without `Bearer`."
+      },
+      "OUTBOUND_EMAIL_PROVIDER": {
+        "description": "Outbound email provider: `cloudflare` (default) or `resend`. For Resend, set this to `resend` and add RESEND_API_KEY as a secret."
+      },
+      "RESEND_API_KEY": {
+        "description": "Resend API key used only when OUTBOUND_EMAIL_PROVIDER is `resend`. Store it as a Worker secret, not as a plain-text variable."
       },
       "TURNSTILE_SECRET_KEY": {
         "description": "Cloudflare Turnstile secret key used to verify login and first-run registration challenges. Pair with NEXT_PUBLIC_TURNSTILE_SITE_KEY at build time."

@@ -57,6 +57,8 @@ export type DomainDnsView = {
 	dkimSelector?: string;
 	sendingSubdomain?: { name: string; tag: string };
 	audit?: DomainDnsAudit;
+	outboundEmailProvider?: "cloudflare" | "resend";
+	outboundEmailConfigured?: boolean;
 };
 
 export type DomainDnsCache = Record<string, { domain: Domain; dns: DomainDnsView }>;
@@ -81,4 +83,6 @@ export type DomainItemCardProps = {
 	onSetup?: (record: DnsAuthRecord) => void;
 	setupRecord?: DnsAuthRecord | null;
 	setupMessage?: string | null;
+	outboundEmailProvider?: "cloudflare" | "resend";
+	outboundEmailConfigured?: boolean;
 };

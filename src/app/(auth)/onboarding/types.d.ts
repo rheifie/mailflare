@@ -1,5 +1,6 @@
 export type DomainListResult = {
 	domains?: { id: string; hostname: string }[];
+	outboundEmailProvider?: "cloudflare" | "resend";
 };
 
 export type DomainCreateResult = {

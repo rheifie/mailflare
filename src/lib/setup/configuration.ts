@@ -1,4 +1,5 @@
 import { hasCloudflareCredentials, isNodeRuntime } from "@/lib/runtime";
+import { getOutboundEmailProvider, isOutboundEmailConfigured } from "@/lib/email/outbound-provider";
 import type { SetupRequirementCheck } from "./types";
 
 export function getSetupRequirementChecks(env: CloudflareEnv): SetupRequirementCheck[] {
@@ -6,7 +7,6 @@ export function getSetupRequirementChecks(env: CloudflareEnv): SetupRequirementC
 	const hasGlobalKey = !!env.CF_API_KEY?.trim() && !!env.CF_EMAIL?.trim();
 
 	if (isNodeRuntime(env)) {
-		const mailer = env.EMAIL as unknown as { configured?: boolean };
 		return [
 			{
 				key: "Database",
@@ -15,8 +15,10 @@ export function getSetupRequirementChecks(env: CloudflareEnv): SetupRequirementC
 			},
 			{
 				key: "Outbound mail",
-				configured: mailer?.configured === true,
-				message: "Set SMTP_URL, or CF_ACCOUNT_ID with CF_TOKEN to send through Cloudflare. Receiving works without it.",
+				configured: isOutboundEmailConfigured(env),
+				message: getOutboundEmailProvider(env) === "resend"
+					? "Set RESEND_API_KEY to send through Resend. Receiving works without it."
+					: "Set SMTP_URL, or CF_ACCOUNT_ID with CF_TOKEN to send through Cloudflare. Receiving works without it.",
 			},
 			{
 				key: "Cloudflare API credentials (optional)",
@@ -29,6 +31,13 @@ export function getSetupRequirementChecks(env: CloudflareEnv): SetupRequirementC
 	}
 
 	return [
+		{
+			key: "Outbound mail",
+			configured: isOutboundEmailConfigured(env),
+			message: getOutboundEmailProvider(env) === "resend"
+				? "Set RESEND_API_KEY as a Worker secret to send through Resend."
+				: "Uses the Cloudflare EMAIL binding. Configure Email Sending for the domain to deliver outbound mail.",
+		},
 		{
 			key: "Cloudflare API credentials",
 			configured: hasApiToken || hasGlobalKey,
