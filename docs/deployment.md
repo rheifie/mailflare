@@ -22,9 +22,9 @@ To configure your `CF_TOKEN` (which is a scoped Cloudflare API Token with specif
         2. DNS & Zones > Zone > Select `Read` Access
         3. DNS & Zones → Zone Settings → Select `Edit` Access
         4. Email & Messaging > Email Routing Rules > Select `Edit` Access
-3. If mailflare will send emails: Add another policy and select `Entire Account`, and configure these permissions:
+3. If using Cloudflare Email Sending (the default when `OUTBOUND_EMAIL_PROVIDER` is unset): Add another policy and select `Entire Account`, and configure these permissions:
     1. Email & Messaging > Email Sending > Select `Edit` Access
-4. After your token is setup, go to `Compute` → `Email Service` → `Email Sending`
+4. When using Cloudflare Email Sending, go to `Compute` → `Email Service` → `Email Sending`
     1. You will need to purchase a paid workers plan if you don't already have one
     2. Select On-board domain and follow the prompts
     3. After this is done, and after you have setup Mailflare, on the Admin > domains page, when you expand the domain you can then configure DKIM and DMARC records
@@ -42,6 +42,8 @@ Paste only the token secret into the `CF_TOKEN` field in step 2. Do not include 
 4. Add `CF_TOKEN` when Cloudflare asks for the app's runtime variables or secrets. This is different from the CF_TOKEN that Cloudflare uses to deploy the app.
 5. Start the deployment and wait for Cloudflare to finish provisioning and deploying the Worker.
 
+If you choose Resend, set `OUTBOUND_EMAIL_PROVIDER=resend` and add `RESEND_API_KEY` before completing `/setup`; outbound mail is checked during setup.
+
 
 ## Step 3: Complete mailflare setup
 
@@ -55,13 +57,24 @@ Setup applies the committed migrations through the Worker's D1 binding before cr
 ## Step 4: Connect your primary domain and create an account
 
 1. Enter a domain that already uses Cloudflare DNS on the same account as your `CF_TOKEN`.
-2. Continue while Mailflare enables Email Routing and configures the required routing and sending DNS.
+2. Continue while Mailflare enables Email Routing. With Cloudflare Email Sending selected, Mailflare also configures sending DNS; with Resend, add and verify the sender domain records in Resend.
 3. Choose the address for your first mailbox and finish setup.
 4. Open the inbox and send a test message to the new address.
 
-To connect more domains later, open **Admin → Domains**, select **New domain**, and enter the hostname. Mailflare configures Email Routing and Email Sending automatically.
+To connect more domains later, open **Admin → Domains**, select **New domain**, and enter the hostname. Mailflare configures Email Routing automatically and provisions Cloudflare Email Sending only when that provider is selected.
 
 Your inbox should be ready to send and receive emails
+
+## Use Resend for outbound mail
+
+The Worker can keep Cloudflare Email Routing for incoming messages and use Resend's HTTPS API for outbound messages.
+
+1. In Cloudflare Worker **Settings → Variables and Secrets**, set the plain-text variable `OUTBOUND_EMAIL_PROVIDER` to `resend`.
+2. Add `RESEND_API_KEY` as an encrypted Worker secret. A sending-only Resend API key is sufficient.
+3. Add each sender domain to Resend and publish the DNS records Resend provides in that domain's Cloudflare DNS zone. Wait until Resend marks the domain verified.
+4. Keep the MX records Mailflare created for Cloudflare Email Routing. Resend's DNS records authenticate outbound sending; they do not replace Cloudflare's inbound routing.
+
+When Resend is selected, Mailflare does not provision Cloudflare Email Sending subdomains, and the runtime `CF_TOKEN` does not need the Email Sending:Edit permission. The app uses Resend for mailbox messages and system messages such as password resets. The provider choice is explicit; failed Resend requests are not sent through Cloudflare as a fallback.
 
 ---
 

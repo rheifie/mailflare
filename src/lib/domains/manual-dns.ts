@@ -1,4 +1,5 @@
 import type { DomainDnsView } from "@/lib/domains/service";
+import { isOutboundEmailConfigured } from "@/lib/email/outbound-provider";
 
 /**
  * The DNS a self-hosted install needs when Mailflare is not managing the
@@ -13,10 +14,9 @@ export async function getManualDomainDns(env: CloudflareEnv, hostname: string): 
 		{ type: "TXT", name: hostname, content: `v=spf1 a:${mailHost} ~all`, ttl: 3600 },
 		{ type: "TXT", name: `_dmarc.${hostname}`, content: "v=DMARC1; p=none", ttl: 3600 },
 	];
-	const mailer = env.EMAIL as unknown as { configured?: boolean };
 	return {
 		routing: { records: [], missing: records, status: "manual" },
 		sending: [],
-		sendingEnabled: mailer?.configured === true,
+		sendingEnabled: isOutboundEmailConfigured(env),
 	};
 }

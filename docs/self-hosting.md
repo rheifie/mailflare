@@ -56,6 +56,10 @@ certificate on a private network.
 Sending: Edit. The domain must be a Cloudflare zone with Email Sending set
 up; Mailflare calls the REST API, no Workers plan needed.
 
+**Resend.** Set `OUTBOUND_EMAIL_PROVIDER=resend` and `RESEND_API_KEY`. Verify
+each sender domain with Resend and publish its DNS records. Cloudflare Email
+Routing can continue to handle inbound mail.
+
 ## Cloudflare zone management (optional)
 
 If `CF_TOKEN` can also edit DNS and Email Routing on your zones, adding a
@@ -75,6 +79,8 @@ and the DNS page shows what to set by hand.
 | `SMTP_MAX_SIZE` | 36 MiB | Largest raw inbound message; allows for encoding overhead on up to 25 MB of attachments. Oversized mail receives an SMTP rejection, which the sender's mail provider can report as a delivery failure. |
 | `SMTP_TLS_KEY`, `SMTP_TLS_CERT` | unset | STARTTLS certificate for the listener |
 | `SMTP_URL` | unset | Outbound relay |
+| `OUTBOUND_EMAIL_PROVIDER` | `cloudflare` | `cloudflare` or `resend` |
+| `RESEND_API_KEY` | unset | Resend API key when using Resend |
 | `SMTP_TLS_REJECT_UNAUTHORIZED` | `true` | Trust self-signed relay certificates when `false` |
 | `CF_ACCOUNT_ID`, `CF_TOKEN` | unset | Cloudflare Email Sending, and zone management if the token allows |
 | `INBOUND_WEBHOOK_SECRET` | unset | Enables `/api/inbound` for the relay Worker |

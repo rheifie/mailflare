@@ -2,6 +2,7 @@ export type SetupStatus = {
 	hasAdminAccount: boolean;
 	hasPrimaryDomain: boolean;
 	primaryDomain?: { hostname: string; sendingRequested: boolean } | null;
+	outboundEmailProvider?: "cloudflare" | "resend";
 	error?: string;
 };
 

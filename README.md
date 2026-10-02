@@ -42,7 +42,7 @@ Mailflare runs in your Cloudflare account. Email Routing delivers incoming messa
 
 You can setup Mailflare and receive email for free
 
-A [Paid Worker](https://developers.cloudflare.com/workers/platform/pricing/) plan ($5/month) is required to send email (and it's recommend to have a smooth experience)
+Cloudflare Email Sending requires a [Paid Workers plan](https://developers.cloudflare.com/email-service/platform/pricing/) for outbound mail to arbitrary recipients. Resend can handle outbound mail while Mailflare remains deployed on Cloudflare Workers; see [Use Resend for outbound mail](docs/deployment.md#use-resend-for-outbound-mail).
 
 ## Deploy
 
@@ -53,15 +53,17 @@ Getting started takes three steps:
 3. **Connect your domain.** Add a domain managed by the same Cloudflare account. Mailflare configures its email routing and helps you create the first mailbox.
 
 ⚠️ IMPORTANT: **`CF_TOKEN` is required during deployment**. Create a scoped [Cloudflare API token with the following permissions](https://github.com/hieunc229/mailflare/issues/24#issuecomment-5523686105) for the domains you want to connect.
-- All accounts - Email Sending:Edit, DNS Settings:Edit, Email Routing Addresses:Edit
+- All accounts - DNS Settings:Edit, Email Routing Addresses:Edit
 - All zones - DNS Settings:Edit, Email Routing Rules:Edit, Zone Settings:Edit, DNS:Edit
+
+Cloudflare Email Sending is the default outbound provider when `OUTBOUND_EMAIL_PROVIDER` is unset. To send through Resend while keeping the app and inbound Email Routing on Cloudflare, set the Worker variable `OUTBOUND_EMAIL_PROVIDER=resend`, add `RESEND_API_KEY` as a Worker secret, and verify each sender domain in Resend. Add the DNS records shown by Resend to the domain's Cloudflare zone. `CF_TOKEN` needs Email Sending:Edit unless Resend is selected.
 
 ### Deploy with an AI coding agent
 
 You can paste the prompt below into an agent that has terminal access. Give it the Cloudflare account ID and **two separate scoped API tokens** through the agent's secret input, not in a public chat, repository, or committed file:
 
 - **Deployment token** (used locally by Wrangler as `CLOUDFLARE_API_TOKEN`): scope it to the target account with **Workers Scripts Edit** (or **Workers Admin** if Cloudflare's newer granular roles are shown, since this is a new Worker), **D1 Edit**, **Workers R2 Storage Edit**, **Queues Edit**, and **Account Settings Read**. Add **Workers Routes Edit** for the target zone only if you want the agent to attach a custom domain or route. See Cloudflare's [token permissions](https://developers.cloudflare.com/fundamentals/api/reference/permissions/) and [Workers roles](https://developers.cloudflare.com/workers/authorization/workers/).
-- **Runtime token** (stored as the Worker's `CF_TOKEN` secret): use the domain permissions listed above. Add **Email Sending Edit** if you want to send mail. This token is separate from the deployment token and must cover the zones you will connect in Mailflare.
+- **Runtime token** (stored as the Worker's `CF_TOKEN` secret): use the domain permissions listed above. Add **Email Sending Edit** when using the default Cloudflare provider (`OUTBOUND_EMAIL_PROVIDER` unset or `cloudflare`). This token is separate from the deployment token and must cover the zones you will connect in Mailflare.
 
 ```text
 Install Mailflare from https://github.com/hieunc229/mailflare in my Cloudflare account.

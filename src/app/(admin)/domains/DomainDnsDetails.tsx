@@ -29,7 +29,22 @@ export default function DomainDnsDetails({
 			: "No routing DNS records found";
 	return (
 		<div className="px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
-			{audit && (
+			{dns.outboundEmailProvider === "resend" && (
+				<section className="rounded-xl bg-blue-50 px-4 py-3">
+					<h2 className="text-base font-semibold text-neutral-900">Outbound email · Resend</h2>
+					<p className="mt-1 text-sm text-neutral-700">
+						{dns.outboundEmailConfigured
+							? "The Resend API key is configured."
+							: "Set RESEND_API_KEY as a Cloudflare Worker secret before sending."}
+					</p>
+					<p className="mt-1 text-sm text-neutral-700">
+						Email Routing: {routingLabel}. Add this domain in Resend, publish the DNS records Resend provides,
+						and wait for its dashboard to mark the domain verified. Mailflare cannot read Resend&apos;s
+						verification status. Keep Cloudflare Email Routing&apos;s MX records for incoming mail.
+					</p>
+				</section>
+			)}
+			{dns.outboundEmailProvider !== "resend" && audit && (
 				<section>
 					<h2 className="text-base font-semibold text-neutral-900">Domain setup</h2>
 					<p className="mt-0.5 text-sm text-neutral-500">

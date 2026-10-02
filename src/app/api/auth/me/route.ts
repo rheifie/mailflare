@@ -4,6 +4,7 @@ import { getEnv } from "@/lib/cloudflare";
 import { hasPrimaryDomain, userHasMailboxes } from "@/lib/user";
 import { getLicenseEntitlements } from "@/lib/licenses/service";
 import { hasCloudflareCredentials, isNodeRuntime } from "@/lib/runtime";
+import { getOutboundEmailProvider, isOutboundEmailConfigured } from "@/lib/email/outbound-provider";
 
 export async function GET(request: Request) {
 	const env = getEnv();
@@ -45,6 +46,8 @@ export async function GET(request: Request) {
 		},
 		runtime: isNodeRuntime(env) ? "node" : "cloudflare",
 		managesDns: hasCloudflareCredentials(env),
+		outboundEmailProvider: getOutboundEmailProvider(env),
+		outboundEmailConfigured: isOutboundEmailConfigured(env),
 		hasMailboxes,
 		isSetup,
 	});

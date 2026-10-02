@@ -28,6 +28,7 @@ export function RegisterClient() {
   );
   const [primaryDomain, setPrimaryDomain] = useState<string | null>(null);
   const [primaryDomainSendingRequested, setPrimaryDomainSendingRequested] = useState<boolean | null>(null);
+  const [outboundEmailProvider, setOutboundEmailProvider] = useState<"cloudflare" | "resend">("cloudflare");
   const [setupDomain, setSetupDomain] = useState<string | null>(null);
   const [domainCheck, setDomainCheck] = useState<DomainPreflight | null>(null);
   const [domainChecking, setDomainChecking] = useState(false);
@@ -100,6 +101,7 @@ export function RegisterClient() {
       setHasPrimaryDomain(data.hasPrimaryDomain);
       setPrimaryDomain(data.primaryDomain?.hostname ?? null);
       setPrimaryDomainSendingRequested(data.primaryDomain?.sendingRequested ?? null);
+      setOutboundEmailProvider(data.outboundEmailProvider ?? "cloudflare");
       setPreparationComplete(true);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Installation preparation failed");
@@ -318,26 +320,32 @@ export function RegisterClient() {
               The domain must already be a Cloudflare zone on this account.
             </p>
           </div>
-          <div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
-            <div>
-              <Label htmlFor="setup-enable-sending">Enable sending</Label>
-              <p className="mt-1 text-xs leading-5 text-neutral-500">
-                {domainChecking
-                  ? "Checking Cloudflare access..."
-                  : domainCheck
-                    ? enableSending
-                      ? "Required to send email."
-                      : "Receive-only mode."
-                    : "Enter the domain and leave the field to verify it."}
-              </p>
+          {outboundEmailProvider === "resend" ? (
+            <p className="rounded-2xl bg-blue-50 px-4 py-3 text-sm leading-6 text-neutral-700">
+              Outbound mail uses Resend. Add this sender domain to Resend and publish its DNS records; Cloudflare Email Routing continues to receive mail.
+            </p>
+          ) : (
+            <div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
+              <div>
+                <Label htmlFor="setup-enable-sending">Enable sending</Label>
+                <p className="mt-1 text-xs leading-5 text-neutral-500">
+                  {domainChecking
+                    ? "Checking Cloudflare access..."
+                    : domainCheck
+                      ? enableSending
+                        ? "Required to send email."
+                        : "Receive-only mode."
+                      : "Enter the domain and leave the field to verify it."}
+                </p>
+              </div>
+              <Switch
+                id="setup-enable-sending"
+                checked={enableSending}
+                onCheckedChange={setEnableSending}
+                disabled={domainChecking || !domainCheck}
+              />
             </div>
-            <Switch
-              id="setup-enable-sending"
-              checked={enableSending}
-              onCheckedChange={setEnableSending}
-              disabled={domainChecking || !domainCheck}
-            />
-          </div>
+          )}
           {domainCheck && (
             <div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
               <CheckCircle2 className="h-4 w-4" />

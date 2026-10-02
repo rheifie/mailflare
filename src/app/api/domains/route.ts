@@ -8,6 +8,7 @@ import type { DnsStatusSummary } from "@/lib/dns-status";
 import { summariseDomainDns } from "@/lib/domains/dns-view";
 import { getDomainProvisioningError } from "@/lib/domains/errors";
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
+import { getOutboundEmailProvider, isOutboundEmailConfigured } from "@/lib/email/outbound-provider";
 
 export async function GET(request: NextRequest) {
 	const env = getEnv();
@@ -39,7 +40,12 @@ export async function GET(request: NextRequest) {
 		}));
 	}
 
-	return NextResponse.json({ domains: domainViews, dns: includeDns ? dns : undefined });
+	return NextResponse.json({
+		domains: domainViews,
+		dns: includeDns ? dns : undefined,
+		outboundEmailProvider: getOutboundEmailProvider(env),
+		outboundEmailConfigured: isOutboundEmailConfigured(env),
+	});
 }
 
 export async function POST(request: Request) {
